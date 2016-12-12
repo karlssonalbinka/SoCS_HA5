@@ -1,4 +1,4 @@
-function [ x, y, A, XY ] = CreatePreferentialNetwork(nInitial, nFinal, p, m )
+function [x, y, A, XY ] = CreatePreferentialNetwork(nInitial, nFinal, p, m )
 % Create a preferential network
 
 % nInitial = initial nbr nodes
@@ -6,7 +6,7 @@ function [ x, y, A, XY ] = CreatePreferentialNetwork(nInitial, nFinal, p, m )
 % p = chance of edges between initial nodes
 % m = number of new edges connected to each new node
 
-nbrTimesteps = floor(nFinal-nInitial);
+nbrTimesteps = nFinal-nInitial;
 
 % create circle coordinates
 angleStep = 2*pi/nFinal;
@@ -18,24 +18,31 @@ A = sparse(nFinal,nFinal);
 x = 1:nInitial;
 y = 1:nInitial;
 for i = 1:nInitial
-    randCoord = (rand(1,i) < p);
-    coordX(1:i) = x(i);
+    randCoord = false(1,nInitial);
+    coordX = x(i);
+    randCoord(i+1:nInitial) = (rand(1,nInitial - i) < p);
     coordY = y(randCoord);
     A(coordX', coordY') = 1;
 end
+while( sum(sum(A(1:nInitial, :)) > 0) < m )
+    index = find( sum(A(1:nInitial, :)) == 0, 1);
+    A( index, ceil(rand(1)*nInitial) ) = 1;
+end
 A = A+A';   %make symmetric
+% figure(1)
+% gplot(A, XY', '*-')
 
 for i_timestep = 1:nbrTimesteps
-    i_timestep
 
     degree = full(sum(A,2));      %calculate degree
     totalDegree = sum(degree);
     degree = degree/totalDegree;
 
     %create added degrees for randoming out later on.
-    cumulatedDegree = zeros(1,nInitial+(i_timestep-1)*m);
-    for i = 1:nInitial+i_timestep;
-        cumulatedDegree(i) = sum(degree(1:i));
+    cumulatedDegree = zeros(1,nInitial+i_timestep);
+    cumulatedDegree(1) = degree(1);
+    for i = 2:nInitial+i_timestep;
+        cumulatedDegree(i) = cumulatedDegree(i-1) + degree(i);
     end
 
     %random what nodes to connect the new node to
@@ -43,7 +50,8 @@ for i_timestep = 1:nbrTimesteps
     newNode = 0;
     for i = 1:m
         while find(newNode == newNodes,1)
-            newNode = find(cumulatedDegree > rand(1,1), 1);
+            randNbr = rand(1);
+            newNode = find(cumulatedDegree > randNbr, 1);
         end
         newNodes(i) = newNode;
     end

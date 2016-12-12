@@ -3,15 +3,15 @@ clear all
 clc
 
 % Create small world network
-N = 20;                 % number of nodes
+N = 100;                 % number of nodes
 neighbours = 2;         % nbr of closest neighbours connected to
 p = 0.4;                % prob of connecting shortcut.
 removeProb = 0;
-[x, y, A, coord_XY] = CreateNetwork(N, p, neighbours, removeProb);
+[x, y, A, coord_XY] = CreateSmallWorldNetwork(N, p, neighbours, removeProb);
 old_A = A;
 
-R_all = 0.01:0.01:20;
-averageIterations = 50;
+R_all = 0.01:0.02:1.5;
+averageIterations = 40;
 nbrIterations = length(R_all);
 maxSizes = zeros(1, nbrIterations);
 %iterate over infection rate
@@ -22,11 +22,16 @@ for i = 1:nbrIterations
     for i_average = 1:averageIterations
         B = old_A;
         %remove edges that pass the recovery check
-        indexToRemove = rand(1,length(x)) < 1-probInfect;
-        xToRemove = [x(indexToRemove), y(indexToRemove)];
-        yToRemove = [y(indexToRemove), x(indexToRemove)];
-        ind = sub2ind([N,N], xToRemove, yToRemove);
-        B(ind) = 0;
+        for j = 1:N
+            for k = 1:j
+                removeEdge = rand(1) < 1-probInfect;
+                if( removeEdge )
+                    B(j, k) = 0;
+                end
+            end
+        end
+        B = B+B';
+        B = B == 2;
         
         %Calculate biggest cluster
         % maxCluster = GetBiggestCluster(A);
